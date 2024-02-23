@@ -81,9 +81,9 @@ TimerHandle_t resultsTimerHandle;
 void SystemClock_Config(void);
 static void SystemPower_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_USART1_UART_Init(void);
-static void MX_RTC_Init(void);
 static void MX_LPTIM3_Init(void);
+static void MX_RTC_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 static void mainOsTask(void* argument);
@@ -306,15 +306,15 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USART1_UART_Init();
-  MX_RTC_Init();
   MX_LPTIM3_Init();
+  MX_RTC_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  //      Start with the green and red LEDs off.
+  //      Start with the green and blue LEDs off.
   //
   HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, LED_Off);
-  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, LED_Off);
+  HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin, LED_Off);
 
   //      Carefully select the interval of the nuisance interrupts to be slightly longer than the tick-
   // test sampling interval.  The sampling interval drives the "expected idle time" in the tickless logic,
@@ -389,7 +389,7 @@ void SystemClock_Config(void)
   HAL_PWR_EnableBkUpAccess();
   __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_MEDIUMHIGH);
 
-  /** Initializes the CPU, AHB and APB busses clocks
+  /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSE|RCC_OSCILLATORTYPE_MSI;
   RCC_OscInitStruct.LSEState = RCC_LSE_ON;
@@ -402,7 +402,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 
-  /** Initializes the CPU, AHB and APB busses clocks
+  /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
@@ -420,6 +420,7 @@ void SystemClock_Config(void)
 
   /** Enable MSI Auto calibration
   */
+  HAL_RCCEx_EnableMSIPLLModeSelection(RCC_MSISPLL_MODE_SEL);
   HAL_RCCEx_EnableMSIPLLMode();
 }
 
@@ -434,6 +435,16 @@ static void SystemPower_Config(void)
    * Disable the internal Pull-Up in Dead Battery pins of UCPD peripheral
    */
   HAL_PWREx_DisableUCPDDeadBattery();
+
+  /*
+   * Switch to SMPS regulator instead of LDO
+   */
+  if (HAL_PWREx_ConfigSupply(PWR_SMPS_SUPPLY) != HAL_OK)
+  {
+    Error_Handler();
+  }
+/* USER CODE BEGIN PWR */
+/* USER CODE END PWR */
 }
 
 /**
@@ -575,21 +586,20 @@ static void MX_USART1_UART_Init(void)
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
+/* USER CODE BEGIN MX_GPIO_Init_1 */
+/* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOH_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOH, LED_RED_Pin|LED_GREEN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : PH3_BOOT0_Pin */
-  GPIO_InitStruct.Pin = PH3_BOOT0_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(PH3_BOOT0_GPIO_Port, &GPIO_InitStruct);
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : USER_Button_Pin */
   GPIO_InitStruct.Pin = USER_Button_Pin;
@@ -597,17 +607,32 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(USER_Button_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LED_RED_Pin LED_GREEN_Pin */
-  GPIO_InitStruct.Pin = LED_RED_Pin|LED_GREEN_Pin;
+  /*Configure GPIO pin : LED_GREEN_Pin */
+  GPIO_InitStruct.Pin = LED_GREEN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
+  HAL_GPIO_Init(LED_GREEN_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : LED_BLUE_Pin */
+  GPIO_InitStruct.Pin = LED_BLUE_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LED_BLUE_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PH3_BOOT0_Pin */
+  GPIO_InitStruct.Pin = PH3_BOOT0_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(PH3_BOOT0_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI13_IRQn, 15, 0);
   HAL_NVIC_EnableIRQ(EXTI13_IRQn);
 
+/* USER CODE BEGIN MX_GPIO_Init_2 */
+/* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
